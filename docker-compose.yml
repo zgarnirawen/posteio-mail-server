@@ -1,0 +1,101 @@
+version: '3.8'
+
+networks:
+  mail-network:
+    driver: bridge
+    ipam:
+      config: 
+        - subnet: 172.20.0.0/24
+
+volumes:
+  poste-data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device : /opt/poste-data
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local
+services:
+  poste:
+    image: analogic/poste.io
+    container_name: poste-mail
+    hostname: mail.entreprise.tn
+    restart: unless-stopped 
+    environment:
+      - TZ=Africa/Tunis
+      - HTTPS=OFF
+    volumes:
+      - poste-data:/data
+    ports:
+      - "25:25"
+      - "110:110"
+      - "143:143"
+      - "465:465"
+      - "587:587"
+      - "993:993"
+      - "995:995"
+      - "4190:4190"
+    networks:
+      mail-network:
+        ipv4_address: 172.20.0.2
+
+  nginx:
+    image: nginx:alpine
+    container_name: nginx-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+      - ./nginx/ssl:/etc/nginx/ssl
+      - ./nginx/logs:/var/log/nginx
+    depends_on:
+      - poste
+    networks:
+      mail-network:
+        ipv4_address: 172.20.0.3
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    ports:
+      - "9091:9090"
+    networks:
+      mail-network:
+        ipv4_address: 172.20.0.4
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=AdminSecure123
+      - GF_USERSALLOW_SIGN_UP=false
+    volumes:
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    networks:
+      mail-network:
+        ipv4_address: 172.20.0.5
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor 
+    restart: unless-stopped
+    privileged: true
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080"
+    networks:
+      mail-network:
+        ipv4_address: 172.20.0.6
