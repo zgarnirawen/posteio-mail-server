@@ -191,15 +191,6 @@ docker exec poste-mail poste email:admin admin@example.com
 
 ---
 
-## Project Timeline
-
-**Day 1:** Installation & containerization
-**Day 2:** Docker Compose & networking
-**Day 3:** Security & administration
-**Day 4:** Monitoring & finalization
-
----
-
 ## Future Improvements
 
 **Short-term:** Let's Encrypt SSL, real domain, automated backups, email alerts, custom dashboards
